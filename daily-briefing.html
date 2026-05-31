@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Briefing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f0e; --surface: #151816; --card: #1a1d1b;
+    --border: rgba(255,255,255,0.07); --border-hover: rgba(255,255,255,0.13);
+    --text-primary: #f0ede8; --text-secondary: #9a9690; --text-muted: #5a5854;
+    --accent-finance: #c8a96e; --accent-geo: #7eb8a4;
+    --accent-economy: #a89bc2; --accent-bank: #c27a7a;
+    --green: #6daa7f; --red: #c27a7a;
+  }
+  body { background: var(--bg); color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-weight: 300; min-height: 100vh; padding: 2rem 1.5rem 4rem; max-width: 1100px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 0.5px solid var(--border); }
+  .header-left h1 { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 400; letter-spacing: -0.01em; color: var(--text-primary); line-height: 1; margin-bottom: 4px; }
+  .header-left .tagline { font-size: 12px; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .header-right { text-align: right; }
+  .header-right .date { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
+  .header-right .last-updated { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .ticker { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2.5rem; }
+  .ticker-pill { background: var(--surface); border: 0.5px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 12px; display: flex; align-items: center; gap: 8px; transition: border-color 0.2s; }
+  .ticker-pill:hover { border-color: var(--border-hover); }
+  .ticker-pill .sym { font-weight: 500; color: var(--text-primary); }
+  .ticker-pill .val { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .ticker-pill .chg { font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chg.up { color: var(--green); } .chg.dn { color: var(--red); }
+  .section { margin-bottom: 2.5rem; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+  .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+  .section-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .dot-finance { background: var(--accent-finance); } .dot-geo { background: var(--accent-geo); }
+  .dot-economy { background: var(--accent-economy); } .dot-bank { background: var(--accent-bank); }
+  .section-line { flex: 1; height: 0.5px; background: var(--border); }
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .card { background: var(--card); border: 0.5px solid var(--border); border-radius: 10px; padding: 1.1rem 1.25rem; transition: border-color 0.2s, transform 0.15s; display: flex; flex-direction: column; gap: 8px; animation: fadeUp 0.4s ease both; text-decoration: none; color: inherit; }
+  .card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .card-source { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); font-weight: 500; }
+  .card-headline { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 400; color: var(--text-primary); line-height: 1.45; }
+  .card-summary { font-size: 12px; color: var(--text-secondary); line-height: 1.65; flex: 1; }
+  .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+  .card-time { font-size: 10px; color: var(--text-muted); }
+  .card-link { font-size: 10px; color: var(--text-muted); text-decoration: none; letter-spacing: 0.06em; transition: color 0.2s; }
+  .card-link:hover { color: var(--text-secondary); }
+  .loading-row { display: flex; align-items: center; gap: 10px; padding: 1.5rem 0; color: var(--text-muted); font-size: 13px; }
+  .spinner { width: 14px; height: 14px; border: 1.5px solid var(--border); border-top-color: var(--text-muted); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-msg { font-size: 12px; color: var(--red); padding: 0.75rem 1rem; background: rgba(194,122,122,0.08); border: 0.5px solid rgba(194,122,122,0.2); border-radius: 8px; }
+  .api-badge { display: inline-block; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); background: var(--surface); border: 0.5px solid var(--border); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+  footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 0.5px solid var(--border); font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
+  .refresh-btn { background: none; border: 0.5px solid var(--border); color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 11px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+  .refresh-btn:hover { border-color: var(--border-hover); color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Daily Briefing</h1>
+    <div class="tagline">Finance &middot; Geopolitics &middot; Economy</div>
+  </div>
+  <div class="header-right">
+    <div class="date" id="today-date"></div>
+    <div class="last-updated" id="last-updated"></div>
+  </div>
+</header>
+
+<!-- Ticker: Alpha Vantage -->
+<div class="ticker">
+  <div class="ticker-pill" id="tick-SPY"><span class="sym">S&P 500</span><span class="val">—</span></div>
+  <div class="ticker-pill" id="tick-QQQ"><span class="sym">NASDAQ</span><span class="val">—</span></div>
+  <div class="ticker-pill" id="tick-GLD"><span class="sym">Gold</span><span class="val">—</span></div>
+  <div class="ticker-pill" id="tick-USO"><span class="sym">Oil (WTI)</span><span class="val">—</span></div>
+  <div class="ticker-pill" id="tick-EUR"><span class="sym">USD/EUR</span><span class="val">—</span></div>
+</div>
+
+<!-- Finance: Marketaux -->
+<div class="section" id="section-finance">
+  <div class="section-header">
+    <div class="section-dot dot-finance"></div>
+    <div class="section-label">Finance <span class="api-badge">Marketaux</span></div>
+    <div class="section-line"></div>
+  </div>
+  <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
+</div>
+
+<!-- Geopolitical: GNews -->
+<div class="section" id="section-geo">
+  <div class="section-header">
+    <div class="section-dot dot-geo"></div>
+    <div class="section-label">Geopolitical <span class="api-badge">GNews</span></div>
+    <div class="section-line"></div>
+  </div>
+  <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
+</div>
+
+<!-- Economy: GNews -->
+<div class="section" id="section-economy">
+  <div class="section-header">
+    <div class="section-dot dot-economy"></div>
+    <div class="section-label">Economy <span class="api-badge">GNews</span></div>
+    <div class="section-line"></div>
+  </div>
+  <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
+</div>
+
+<!-- Central Banks: Marketaux -->
+<div class="section" id="section-bank">
+  <div class="section-header">
+    <div class="section-dot dot-bank"></div>
+    <div class="section-label">Central Banks &amp; IMF <span class="api-badge">Marketaux</span></div>
+    <div class="section-line"></div>
+  </div>
+  <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
+</div>
+
+<footer>
+  <span>Marketaux &middot; GNews &middot; Alpha Vantage</span>
+  <button class="refresh-btn" onclick="location.reload()">↻ Refresh</button>
+</footer>
+
+<script>
+  // ── API Keys ───────────────────────────────────────────
+  const MARKETAUX_KEY = 'xmlmuQhOYEKb2F6W2xNwlGqLtMy92GcpIAq9eijS';
+  const GNEWS_KEY     = '39dd3e9d216b44e9aa0f18593d73574c';
+  const AV_KEY        = '0QU05KBUUXFLKC9Q';
+
+  // ── Dates ──────────────────────────────────────────────
+  const now = new Date();
+  document.getElementById('today-date').textContent =
+    now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('last-updated').textContent =
+    'Updated ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  function timeAgo(dateStr) {
+    const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
+    if (diff < 60) return diff + 'm ago';
+    if (diff < 1440) return Math.floor(diff / 60) + 'h ago';
+    return Math.floor(diff / 1440) + 'd ago';
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // ── Alpha Vantage Ticker ───────────────────────────────
+  // Staggered 4s apart to avoid rate limiting (free tier: 15 req/min)
+  async function loadTicker() {
+    const symbols = [
+      { id: 'tick-SPY', sym: 'SPY', label: 'S&P 500' },
+      { id: 'tick-QQQ', sym: 'QQQ', label: 'NASDAQ'  },
+      { id: 'tick-GLD', sym: 'GLD', label: 'Gold'    },
+      { id: 'tick-USO', sym: 'USO', label: 'Oil (WTI)'},
+    ];
+    for (const s of symbols) {
+      try {
+        const res  = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${s.sym}&apikey=${AV_KEY}`);
+        const data = await res.json();
+        const q    = data['Global Quote'];
+        if (!q || !q['05. price']) throw new Error('no data');
+        const price = parseFloat(q['05. price']).toFixed(2);
+        const pct   = parseFloat(q['10. change percent']).toFixed(2);
+        const isUp  = parseFloat(pct) >= 0;
+        document.getElementById(s.id).innerHTML = `
+          <span class="sym">${s.label}</span>
+          <span class="val">$${price}</span>
+          <span class="chg ${isUp ? 'up' : 'dn'}">${isUp ? '▲' : '▼'} ${Math.abs(pct)}%</span>`;
+      } catch(e) { /* leave as dash on error */ }
+      await sleep(4000);
+    }
+    try {
+      const res  = await fetch(`https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=EUR&apikey=${AV_KEY}`);
+      const data = await res.json();
+      const rate = data['Realtime Currency Exchange Rate'];
+      if (rate && rate['5. Exchange Rate']) {
+        document.getElementById('tick-EUR').innerHTML =
+          `<span class="sym">USD/EUR</span><span class="val">${parseFloat(rate['5. Exchange Rate']).toFixed(4)}</span>`;
+      }
+    } catch(e) {}
+  }
+
+  // ── Card Renderer ──────────────────────────────────────
+  function renderCards(containerId, articles) {
+    const section = document.getElementById(containerId);
+    const header  = section.querySelector('.section-header');
+    section.innerHTML = '';
+    section.appendChild(header);
+
+    if (!articles || !articles.length) {
+      const err = document.createElement('div');
+      err.className = 'error-msg';
+      err.textContent = 'No articles found right now — try refreshing later.';
+      section.appendChild(err);
+      return;
+    }
+
+    // Cap any single source at 2 cards to ensure variety
+    const sourceCounts = {};
+    const deduped = [];
+    for (const a of articles) {
+      const src = (a.source || 'unknown').toLowerCase();
+      sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+      if (sourceCounts[src] <= 2) deduped.push(a);
+      if (deduped.length >= 6) break;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'cards-grid';
+    deduped.forEach((a, i) => {
+      const card = document.createElement('a');
+      card.className = 'card';
+      card.href = a.url || '#';
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+      card.style.animationDelay = (i * 0.07) + 's';
+      const summary = a.description
+        ? (a.description.length > 160 ? a.description.slice(0, 157) + '...' : a.description)
+        : 'No summary available.';
+      card.innerHTML = `
+        <div class="card-source">${a.source || 'Unknown'}</div>
+        <div class="card-headline">${a.title || 'No headline'}</div>
+        <div class="card-summary">${summary}</div>
+        <div class="card-footer">
+          <span class="card-time">${a.publishedAt || a.published_at ? timeAgo(a.publishedAt || a.published_at) : ''}</span>
+          <span class="card-link">Read →</span>
+        </div>`;
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+  }
+
+  function showError(containerId, msg) {
+    const section = document.getElementById(containerId);
+    const header  = section.querySelector('.section-header');
+    section.innerHTML = '';
+    section.appendChild(header);
+    const err = document.createElement('div');
+    err.className = 'error-msg';
+    err.textContent = msg;
+    section.appendChild(err);
+  }
+
+  // ── Marketaux Fetch ────────────────────────────────────
+  // Free tier returns 3 articles/request — we make 2 requests per section
+  // and merge them for up to 6 unique articles
+  async function fetchMarketaux(keywords) {
+    const base = `https://api.marketaux.com/v1/news/all`
+      + `?keywords=${encodeURIComponent(keywords)}`
+      + `&language=en&limit=3&sort=published_at`
+      + `&api_token=${MARKETAUX_KEY}`;
+
+    // Two requests: page 1 and page 2, merged
+    const [r1, r2] = await Promise.all([
+      fetch(base + '&page=1').then(r => r.json()),
+      fetch(base + '&page=2').then(r => r.json()),
+    ]);
+
+    const articles1 = (r1.data || []);
+    const articles2 = (r2.data || []);
+
+    // Normalize fields to match our renderer
+    const normalize = a => ({
+      url:          a.url,
+      source:       a.source,
+      title:        a.title,
+      description:  a.description || a.snippet,
+      publishedAt:  a.published_at,
+    });
+
+    // Merge and deduplicate by URL
+    const seen = new Set();
+    return [...articles1, ...articles2].map(normalize).filter(a => {
+      if (seen.has(a.url)) return false;
+      seen.add(a.url);
+      return true;
+    });
+  }
+
+  // ── GNews Fetch ────────────────────────────────────────
+  // Returns up to 10 articles per request — great source diversity
+  async function fetchGNews(query) {
+    const url = `https://gnews.io/api/v4/search`
+      + `?q=${encodeURIComponent(query)}`
+      + `&lang=en&country=us&max=10`
+      + `&apikey=${GNEWS_KEY}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.errors) throw new Error(data.errors.join(', '));
+
+    // Normalize GNews fields to match our renderer
+    return (data.articles || []).map(a => ({
+      url:         a.url,
+      source:      a.source?.name || 'Unknown',
+      title:       a.title,
+      description: a.description,
+      publishedAt: a.publishedAt,
+    }));
+  }
+
+  // ── Load All News ──────────────────────────────────────
+  async function loadNews() {
+    // Finance and Central Banks → Marketaux (strongest for market/finance content)
+    // Geopolitical and Economy  → GNews (broader international source pool)
+
+    const shownUrls = new Set(); // prevent same article appearing in multiple sections
+
+    const sections = [
+      {
+        id:      'section-finance',
+        fetch:   () => fetchMarketaux('stock market earnings equities bonds Wall Street S&P Nasdaq'),
+      },
+      {
+        id:      'section-geo',
+        fetch:   () => fetchGNews('geopolitics OR war OR NATO OR diplomacy OR sanctions OR "foreign policy"'),
+      },
+      {
+        id:      'section-economy',
+        fetch:   () => fetchGNews('economy OR inflation OR GDP OR unemployment OR recession OR "trade war"'),
+      },
+      {
+        id:      'section-bank',
+        fetch:   () => fetchMarketaux('Federal Reserve IMF "central bank" "monetary policy" "interest rate" "rate decision"'),
+      },
+    ];
+
+    for (const s of sections) {
+      try {
+        const raw      = await s.fetch();
+        const articles = raw.filter(a => {
+          if (!a.url || shownUrls.has(a.url)) return false;
+          shownUrls.add(a.url);
+          return true;
+        });
+        renderCards(s.id, articles);
+      } catch(e) {
+        showError(s.id, 'Could not load: ' + e.message);
+      }
+    }
+  }
+
+  // Fire news immediately; ticker loads in background (staggered)
+  loadNews();
+  loadTicker();
+</script>
+</body>
+</html>
