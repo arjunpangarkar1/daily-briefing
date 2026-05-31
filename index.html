@@ -79,6 +79,7 @@
   <div class="ticker-pill" id="tick-EUR"><span class="sym">USD/EUR</span><span class="val">—</span></div>
 </div>
 
+<!-- Finance: 3 cards, Marketaux, 1 request -->
 <div class="section" id="section-finance">
   <div class="section-header">
     <div class="section-dot dot-finance"></div>
@@ -88,6 +89,7 @@
   <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
 </div>
 
+<!-- Geopolitical: 3 cards, GNews, 1 request -->
 <div class="section" id="section-geo">
   <div class="section-header">
     <div class="section-dot dot-geo"></div>
@@ -97,6 +99,7 @@
   <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
 </div>
 
+<!-- Economy: 2 cards, GNews, 1 request -->
 <div class="section" id="section-economy">
   <div class="section-header">
     <div class="section-dot dot-economy"></div>
@@ -106,6 +109,7 @@
   <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
 </div>
 
+<!-- Central Banks: 2 cards, Marketaux, 1 request -->
 <div class="section" id="section-bank">
   <div class="section-header">
     <div class="section-dot dot-bank"></div>
@@ -125,7 +129,7 @@
   const GNEWS_KEY     = '39dd3e9d216b44e9aa0f18593d73574c';
   const AV_KEY        = '0QU05KBUUXFLKC9Q';
 
-  // Domains to exclude from Marketaux — low quality regional sources
+  // Low-quality regional domains to exclude from Marketaux results
   const BLOCKED_DOMAINS = [
     'indian-share-tips.com','livemint.com','thehindubusinessline.com',
     'manilatimes.net','argaam.com','prweb.com','raskmedia.com.au',
@@ -133,6 +137,7 @@
     'economictimes.indiatimes.com','business-standard.com'
   ];
 
+  // ── Dates ──────────────────────────────────────────────
   const now = new Date();
   document.getElementById('today-date').textContent =
     now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -150,16 +155,16 @@
 
   function isBlocked(article) {
     const src = (article.source || '').toLowerCase();
-    const url = (article.url || '').toLowerCase();
+    const url = (article.url   || '').toLowerCase();
     return BLOCKED_DOMAINS.some(d => src.includes(d) || url.includes(d));
   }
 
   // ── Alpha Vantage Ticker ───────────────────────────────
   async function loadTicker() {
     const symbols = [
-      { id: 'tick-SPY', sym: 'SPY', label: 'S&P 500' },
-      { id: 'tick-QQQ', sym: 'QQQ', label: 'NASDAQ'  },
-      { id: 'tick-GLD', sym: 'GLD', label: 'Gold'    },
+      { id: 'tick-SPY', sym: 'SPY', label: 'S&P 500'  },
+      { id: 'tick-QQQ', sym: 'QQQ', label: 'NASDAQ'   },
+      { id: 'tick-GLD', sym: 'GLD', label: 'Gold'     },
       { id: 'tick-USO', sym: 'USO', label: 'Oil (WTI)'},
     ];
     for (const s of symbols) {
@@ -190,7 +195,7 @@
   }
 
   // ── Card Renderer ──────────────────────────────────────
-  function renderCards(containerId, articles) {
+  function renderCards(containerId, articles, maxCards) {
     const section = document.getElementById(containerId);
     const header  = section.querySelector('.section-header');
     section.innerHTML = '';
@@ -204,13 +209,24 @@
       return;
     }
 
+    // Cap any single source at 1 card to maximise variety within small card counts
     const sourceCounts = {};
     const deduped = [];
     for (const a of articles) {
       const src = (a.source || 'unknown').toLowerCase();
       sourceCounts[src] = (sourceCounts[src] || 0) + 1;
-      if (sourceCounts[src] <= 2) deduped.push(a);
-      if (deduped.length >= 6) break;
+      if (sourceCounts[src] <= 1) deduped.push(a);
+      if (deduped.length >= maxCards) break;
+    }
+
+    // If strict dedup left us short, relax to 2 per source to fill remaining slots
+    if (deduped.length < maxCards) {
+      for (const a of articles) {
+        if (deduped.includes(a)) continue;
+        const src = (a.source || 'unknown').toLowerCase();
+        if ((sourceCounts[src] || 0) <= 2) deduped.push(a);
+        if (deduped.length >= maxCards) break;
+      }
     }
 
     const grid = document.createElement('div');
@@ -249,43 +265,32 @@
     section.appendChild(err);
   }
 
-  // ── Marketaux — fetch pages 1+2, filter blocked domains ──
+  // ── Marketaux — single request per section ─────────────
   async function fetchMarketaux(keywords) {
-    const base = `https://api.marketaux.com/v1/news/all`
+    const url = `https://api.marketaux.com/v1/news/all`
       + `?keywords=${encodeURIComponent(keywords)}`
       + `&language=en&limit=3&sort=published_at`
       + `&countries=us,gb,ca,au`
       + `&api_token=${MARKETAUX_KEY}`;
-
-    const [r1, r2, r3] = await Promise.all([
-      fetch(base + '&page=1').then(r => r.json()),
-      fetch(base + '&page=2').then(r => r.json()),
-      fetch(base + '&page=3').then(r => r.json()),
-    ]);
-
-    const normalize = a => ({
-      url:         a.url,
-      source:      a.source,
-      title:       a.title,
-      description: a.description || a.snippet,
-      publishedAt: a.published_at,
-    });
-
-    const seen = new Set();
-    return [...(r1.data||[]), ...(r2.data||[]), ...(r3.data||[])]
-      .map(normalize)
-      .filter(a => {
-        if (!a.url || seen.has(a.url) || isBlocked(a)) return false;
-        seen.add(a.url);
-        return true;
-      });
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'Marketaux error');
+    return (data.data || [])
+      .filter(a => !isBlocked(a))
+      .map(a => ({
+        url:         a.url,
+        source:      a.source,
+        title:       a.title,
+        description: a.description || a.snippet,
+        publishedAt: a.published_at,
+      }));
   }
 
-  // ── GNews ──────────────────────────────────────────────
-  async function fetchGNews(query) {
+  // ── GNews — single request per section ────────────────
+  async function fetchGNews(query, max) {
     const url = `https://gnews.io/api/v4/search`
       + `?q=${encodeURIComponent(query)}`
-      + `&lang=en&country=us&max=10`
+      + `&lang=en&country=us&max=${max}`
       + `&apikey=${GNEWS_KEY}`;
     const res  = await fetch(url);
     const data = await res.json();
@@ -299,26 +304,34 @@
     }));
   }
 
-  // ── Load All ───────────────────────────────────────────
+  // ── Load All News ──────────────────────────────────────
+  // Total API calls per page load:
+  //   Marketaux: 2 (Finance + Central Banks)
+  //   GNews:     2 (Geopolitical + Economy)
+  //   AV:        5 (ticker — staggered, background)
   async function loadNews() {
     const shownUrls = new Set();
 
     const sections = [
       {
-        id:    'section-finance',
-        fetch: () => fetchMarketaux('Wall Street S&P 500 Nasdaq stocks earnings equities bonds treasury'),
+        id:       'section-finance',
+        maxCards: 3,
+        fetch:    () => fetchMarketaux('Wall Street S&P 500 Nasdaq stocks earnings equities bonds treasury'),
       },
       {
-        id:    'section-geo',
-        fetch: () => fetchGNews('geopolitics OR war OR NATO OR diplomacy OR sanctions OR "foreign policy" OR conflict'),
+        id:       'section-geo',
+        maxCards: 3,
+        fetch:    () => fetchGNews('geopolitics OR war OR NATO OR diplomacy OR sanctions OR "foreign policy"', 6),
       },
       {
-        id:    'section-economy',
-        fetch: () => fetchGNews('economy OR inflation OR GDP OR unemployment OR recession OR "Federal Reserve" OR "interest rates"'),
+        id:       'section-economy',
+        maxCards: 2,
+        fetch:    () => fetchGNews('economy OR inflation OR GDP OR unemployment OR recession OR "trade deficit"', 4),
       },
       {
-        id:    'section-bank',
-        fetch: () => fetchMarketaux('Federal Reserve IMF "central bank" "monetary policy" "interest rate decision" "rate hike" "rate cut"'),
+        id:       'section-bank',
+        maxCards: 2,
+        fetch:    () => fetchMarketaux('Federal Reserve IMF "central bank" "monetary policy" "interest rate decision"'),
       },
     ];
 
@@ -330,7 +343,7 @@
           shownUrls.add(a.url);
           return true;
         });
-        renderCards(s.id, articles);
+        renderCards(s.id, articles, s.maxCards);
       } catch(e) {
         showError(s.id, 'Could not load: ' + e.message);
       }
