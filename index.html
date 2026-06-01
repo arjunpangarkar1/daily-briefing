@@ -154,8 +154,16 @@
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   function isBlocked(article) {
-    const src = (article.source || '').toLowerCase();
-    const url = (article.url   || '').toLowerCase();
+    const src   = (article.source || '').toLowerCase();
+    const url   = (article.url    || '').toLowerCase();
+    const title = (article.title  || '').toLowerCase();
+    const BLOCKED_TITLES = [
+      'corrections and clarifications',
+      'letters to the editor',
+      'your photos',
+      'crossword',
+    ];
+    if (BLOCKED_TITLES.some(t => title.includes(t))) return true;
     return BLOCKED_DOMAINS.some(d => src.includes(d) || url.includes(d));
   }
 
