@@ -323,12 +323,12 @@ async function fetchGuardian(query, max) {
       {
         id:       'section-geo',
         maxCards: 3,
-        fetch:    () => fetchGNews('geopolitics OR war OR NATO OR diplomacy OR sanctions OR "foreign policy"', 6),
+        fetch:    () => fetchGuardian('geopolitics war NATO diplomacy sanctions', 6),
       },
       {
         id:       'section-economy',
         maxCards: 2,
-        fetch:    () => fetchGNews('economy OR inflation OR GDP OR unemployment OR recession OR "trade deficit"', 4),
+       fetch:    () => fetchGuardian('economy inflation GDP unemployment recession', 4),
       },
       {
         id:       'section-bank',
