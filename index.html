@@ -222,21 +222,13 @@
     // Cap any single source at 1 card to maximise variety within small card counts
     const sourceCounts = {};
     const deduped = [];
+    const geoSection = containerId === 'section-geo';
+    const sourceLimit = geoSection ? 3 : 1;
     for (const a of articles) {
       const src = (a.source || 'unknown').toLowerCase();
       sourceCounts[src] = (sourceCounts[src] || 0) + 1;
-      if (sourceCounts[src] <= 1) deduped.push(a);
+      if (sourceCounts[src] <= sourceLimit) deduped.push(a);
       if (deduped.length >= maxCards) break;
-    }
-
-    // If strict dedup left us short, relax to 2 per source to fill remaining slots
-    if (deduped.length < maxCards) {
-      for (const a of articles) {
-        if (deduped.includes(a)) continue;
-        const src = (a.source || 'unknown').toLowerCase();
-        if ((sourceCounts[src] || 0) <= 2) deduped.push(a);
-        if (deduped.length >= maxCards) break;
-      }
     }
 
     const grid = document.createElement('div');
