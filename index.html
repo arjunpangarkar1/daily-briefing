@@ -328,7 +328,7 @@ async function fetchGuardian(query, max) {
       {
         id:       'section-finance',
         maxCards: 3,
-        fetch:    () => fetchMarketaux('stock market earnings equities S&P 500 Nasdaq Wall Street IPO'),
+        fetch:    () => fetchMarketaux('stocks OR earnings OR equities OR "S&P 500" OR Nasdaq OR "Wall Street" OR bonds OR IPO OR markets'),
       },
       {
         id:       'section-geo',
