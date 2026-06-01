@@ -320,22 +320,22 @@ async function fetchGuardian(query, max) {
       {
         id:       'section-finance',
         maxCards: 3,
-        fetch:    () => fetchMarketaux('Wall Street S&P 500 Nasdaq stocks earnings equities bonds treasury'),
+        fetch:    () => fetchMarketaux('stock market earnings equities S&P 500 Nasdaq Wall Street IPO'),
       },
       {
         id:       'section-geo',
         maxCards: 3,
-        fetch:    () => fetchGuardian('geopolitics war NATO diplomacy sanctions', 6),
+        fetch:    () => fetchGuardian('war OR conflict OR NATO OR sanctions OR diplomacy OR ceasefire OR missile OR troops', 6),
       },
       {
         id:       'section-economy',
         maxCards: 2,
-       fetch:    () => fetchGuardian('economy inflation GDP unemployment recession', 4),
+       fetch:    () => fetchGuardian('inflation OR "interest rates" OR GDP OR "trade war" OR tariffs OR unemployment OR "cost of living"', 4),
       },
       {
         id:       'section-bank',
         maxCards: 2,
-        fetch:    () => fetchMarketaux('Federal Reserve IMF "central bank" "monetary policy" "interest rate decision"'),
+        fetch:    () => fetchMarketaux('"Federal Reserve" OR "IMF" OR "Bank of England" OR "ECB" OR "rate cut" OR "rate hike" OR "monetary policy"'),
       },
     ];
 
