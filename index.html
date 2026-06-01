@@ -163,9 +163,11 @@
       'your photos',
       'crossword',
     ];
-    if (BLOCKED_TITLES.some(t => title.includes(t))) return true;
-    return BLOCKED_DOMAINS.some(d => src.includes(d) || url.includes(d));
-  }
+    const BLOCKED_URL_PATTERNS = [
+      '/corrections/',
+      'tv-schedule',
+    ];
+    if (BLOCKED_URL_PATTERNS.some(p => url.includes(p))) return true;
 
   // ── Alpha Vantage Ticker ───────────────────────────────
   async function loadTicker() {
