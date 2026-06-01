@@ -287,20 +287,22 @@
   }
 
   // ── GNews — single request per section ────────────────
-  async function fetchGNews(query, max) {
-    const url = `https://gnews.io/api/v4/search`
+async function fetchGuardian(query, max) {
+    const url = `https://content.guardianapis.com/search`
       + `?q=${encodeURIComponent(query)}`
-      + `&lang=en&country=us&max=${max}`
-      + `&apikey=${GNEWS_KEY}`;
+      + `&show-fields=trailText`
+      + `&page-size=${max}`
+      + `&order-by=newest`
+      + `&api-key=13bfb0e3-7fbd-4253-b7e4-17112f4c13e3`;
     const res  = await fetch(url);
     const data = await res.json();
-    if (data.errors) throw new Error(data.errors.join(', '));
-    return (data.articles || []).map(a => ({
-      url:         a.url,
-      source:      a.source?.name || 'Unknown',
-      title:       a.title,
-      description: a.description,
-      publishedAt: a.publishedAt,
+    if (data.response?.status !== 'ok') throw new Error('Guardian API error');
+    return (data.response.results || []).map(a => ({
+      url:         a.webUrl,
+      source:      'The Guardian',
+      title:       a.webTitle,
+      description: a.fields?.trailText || '',
+      publishedAt: a.webPublicationDate,
     }));
   }
 
