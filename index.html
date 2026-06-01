@@ -163,10 +163,8 @@
       'your photos',
       'crossword',
     ];
-    const BLOCKED_URL_PATTERNS = [
-      '/corrections/',
-      'tv-schedule',
-    ];
+    const BLOCKED_URL_PATTERNS = ['/corrections/', 'tv-schedule'];
+    if (BLOCKED_TITLES.some(t => title.includes(t))) return true;
     if (BLOCKED_URL_PATTERNS.some(p => url.includes(p))) return true;
 
   // ── Alpha Vantage Ticker ───────────────────────────────
@@ -205,7 +203,7 @@
   }
 
   // ── Card Renderer ──────────────────────────────────────
-  function renderCards(containerId, articles, maxCards) {
+  function renderCards(containerId, articles, maxCards, maxPerSource) {
     const section = document.getElementById(containerId);
     const header  = section.querySelector('.section-header');
     section.innerHTML = '';
@@ -227,7 +225,7 @@
     for (const a of articles) {
       const src = (a.source || 'unknown').toLowerCase();
       sourceCounts[src] = (sourceCounts[src] || 0) + 1;
-      if (sourceCounts[src] <= 1) deduped.push(a);
+      if (sourceCounts[src] <= maxPerSource) deduped.push(a);
       if (deduped.length >= maxCards) break;
     }
 
@@ -328,23 +326,27 @@ async function fetchGuardian(query, max) {
 
     const sections = [
       {
-        id:       'section-finance',
-        maxCards: 3,
+        id:          'section-finance',
+        maxCards:    3,
+        maxPerSource: 1,
         fetch:    () => fetchMarketaux('stocks OR earnings OR equities OR "S&P 500" OR Nasdaq OR "Wall Street" OR bonds OR IPO OR markets'),
       },
       {
-        id:       'section-geo',
-        maxCards: 3,
+        id:          'section-geo',
+        maxCards:    3,
+        maxPerSource: 2,
         fetch:    () => fetchGuardian('war OR conflict OR NATO OR sanctions OR diplomacy OR ceasefire OR missile OR troops', 6),
       },
       {
-        id:       'section-economy',
-        maxCards: 2,
-       fetch:    () => fetchGuardian('inflation OR "interest rates" OR GDP OR "trade war" OR tariffs OR unemployment OR "cost of living"', 4),
+        id:          'section-economy',
+        maxCards:    2,
+        maxPerSource: 1,
+        fetch:    () => fetchGuardian('inflation OR "interest rates" OR GDP OR "trade war" OR tariffs OR unemployment OR "cost of living"', 4),
       },
       {
-        id:       'section-bank',
-        maxCards: 2,
+        id:          'section-bank',
+        maxCards:    2,
+        maxPerSource: 1,
         fetch:    () => fetchMarketaux('"Federal Reserve" OR "IMF" OR "Bank of England" OR "ECB" OR "rate cut" OR "rate hike" OR "monetary policy"'),
       },
     ];
@@ -357,7 +359,7 @@ async function fetchGuardian(query, max) {
           shownUrls.add(a.url);
           return true;
         });
-        renderCards(s.id, articles, s.maxCards);
+        renderCards(s.id, articles, s.maxCards, s.maxPerSource);
       } catch(e) {
         showError(s.id, 'Could not load: ' + e.message);
       }
