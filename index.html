@@ -127,7 +127,7 @@
 <script>
   const MARKETAUX_KEY = 'xmlmuQhOYEKb2F6W2xNwlGqLtMy92GcpIAq9eijS';
   const GNEWS_KEY     = '39dd3e9d216b44e9aa0f18593d73574c';
-  const AV_KEY        = '0QU05KBUUXFLKC9Q';
+  const FINNHUB_KEY   = 'd8fh2i1r01qn4439udg0d8fh2i1r01qn4439udgg';
 
   // Low-quality regional domains to exclude from Marketaux results
   const BLOCKED_DOMAINS = [
@@ -175,37 +175,39 @@
     if (BLOCKED_URL_PATTERNS.some(p => url.includes(p))) return true;
     return BLOCKED_DOMAINS.some(d => src.includes(d) || url.includes(d));
   }
-  // ── Alpha Vantage Ticker ───────────────────────────────
+  // ── Finnhub Ticker ─────────────────────────────────────
   async function loadTicker() {
     const symbols = [
-      { id: 'tick-SPY', sym: 'SPY', label: 'S&P 500'  },
-      { id: 'tick-QQQ', sym: 'QQQ', label: 'NASDAQ'   },
-      { id: 'tick-GLD', sym: 'GLD', label: 'Gold'     },
-      { id: 'tick-USO', sym: 'USO', label: 'Oil (WTI)'},
+      { id: 'tick-SPY', sym: 'SPY',  label: 'S&P 500'  },
+      { id: 'tick-QQQ', sym: 'QQQ',  label: 'NASDAQ'   },
+      { id: 'tick-GLD', sym: 'GLD',  label: 'Gold'     },
+      { id: 'tick-USO', sym: 'USO',  label: 'Oil (WTI)'},
     ];
-    for (const s of symbols) {
+
+    // Finnhub allows 60 req/min — all calls fire simultaneously, no stagger needed
+    await Promise.all(symbols.map(async s => {
       try {
-        const res  = await (`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${s.sym}&apikey=${AV_KEY}`);
+        const res  = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.sym}&token=${FINNHUB_KEY}`);
         const data = await res.json();
-        const q    = data['Global Quote'];
-        if (!q || !q['05. price']) throw new Error('no data');
-        const price = parseFloat(q['05. price']).toFixed(2);
-        const pct   = parseFloat(q['10. change percent']).toFixed(2);
-        const isUp  = parseFloat(pct) >= 0;
+        if (!data || !data.c) throw new Error('no data');
+        const price = data.c.toFixed(2);
+        const pct   = data.dp.toFixed(2);
+        const isUp  = data.dp >= 0;
         document.getElementById(s.id).innerHTML = `
           <span class="sym">${s.label}</span>
           <span class="val">$${price}</span>
           <span class="chg ${isUp ? 'up' : 'dn'}">${isUp ? '▲' : '▼'} ${Math.abs(pct)}%</span>`;
       } catch(e) {}
-      await sleep(4000);
-    }
+    }));
+
+    // USD/EUR via Finnhub forex
     try {
-      const res  = await fetch(`https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=EUR&apikey=${AV_KEY}`);
+      const res  = await fetch(`https://finnhub.io/api/v1/forex/rates?base=USD&token=${FINNHUB_KEY}`);
       const data = await res.json();
-      const rate = data['Realtime Currency Exchange Rate'];
-      if (rate && rate['5. Exchange Rate']) {
+      const rate = data?.quote?.EUR;
+      if (rate) {
         document.getElementById('tick-EUR').innerHTML =
-          `<span class="sym">USD/EUR</span><span class="val">${parseFloat(rate['5. Exchange Rate']).toFixed(4)}</span>`;
+          `<span class="sym">USD/EUR</span><span class="val">${rate.toFixed(4)}</span>`;
       }
     } catch(e) {}
   }
