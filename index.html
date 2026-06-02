@@ -203,12 +203,12 @@
 
     // USD/EUR via Finnhub forex
     try {
-      const proxyUrl = `https://corsproxy.io/?https://finnhub.io/api/v1/quote?symbol=OANDA%3AEURUSD&token=${FINNHUB_KEY}`;
-      const res  = await fetch(proxyUrl);
+      const res  = await fetch(`https://api.frankfurter.app/latest?from=USD&to=EUR`);
       const data = await res.json();
-      if (data && data.c) {
+      const rate = data?.rates?.EUR;
+      if (rate) {
         document.getElementById('tick-EUR').innerHTML =
-          `<span class="sym">USD/EUR</span><span class="val">${data.c.toFixed(4)}</span>`;
+          `<span class="sym">USD/EUR</span><span class="val">${rate.toFixed(4)}</span>`;
       }
     } catch(e) {}
   }
