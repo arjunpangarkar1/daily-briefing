@@ -282,7 +282,10 @@
       + `&language=en&limit=3&sort=published_at`
       + `&countries=us,gb,ca,au`
       + `&api_token=${MARKETAUX_KEY}`;
-    const res  = await fetch(url);
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out — try refreshing.')), 10000)
+    );
+    const res  = await Promise.race([fetch(url), timeout]);
     const data = await res.json();
     if (data.error) throw new Error(data.error.message || 'Marketaux error');
     return (data.data || [])
