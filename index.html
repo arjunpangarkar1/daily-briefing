@@ -203,8 +203,9 @@
 
     // USD/EUR via Finnhub forex
     try {
-      const res  = await fetch(`https://finnhub.io/api/v1/forex/rates?base=USD&token=${FINNHUB_KEY}`);
-      const data = await res.json();
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://finnhub.io/api/v1/forex/rates?base=USD&token=${FINNHUB_KEY}`)}`;
+      const res  = await fetch(proxyUrl);
+      const data = JSON.parse((await res.json()).contents);
       const rate = data?.quote?.EUR;
       if (rate) {
         document.getElementById('tick-EUR').innerHTML =
