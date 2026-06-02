@@ -76,7 +76,6 @@
   <div class="ticker-pill" id="tick-QQQ"><span class="sym">NASDAQ</span><span class="val">—</span></div>
   <div class="ticker-pill" id="tick-GLD"><span class="sym">Gold</span><span class="val">—</span></div>
   <div class="ticker-pill" id="tick-USO"><span class="sym">Oil (WTI)</span><span class="val">—</span></div>
-  <div class="ticker-pill" id="tick-EUR"><span class="sym">USD/EUR</span><span class="val">—</span></div>
 </div>
 
 <!-- Finance: 3 cards, Marketaux, 1 request -->
@@ -200,18 +199,6 @@
           <span class="chg ${isUp ? 'up' : 'dn'}">${isUp ? '▲' : '▼'} ${Math.abs(pct)}%</span>`;
       } catch(e) {}
     }));
-
-    // USD/EUR via Finnhub forex
-    try {
-      const res  = await fetch(`https://api.frankfurter.app/latest?from=USD&to=EUR`);
-      const data = await res.json();
-      const rate = data?.rates?.EUR;
-      if (rate) {
-        document.getElementById('tick-EUR').innerHTML =
-          `<span class="sym">USD/EUR</span><span class="val">${rate.toFixed(4)}</span>`;
-      }
-    } catch(e) {}
-  }
 
   // ── Card Renderer ──────────────────────────────────────
   function renderCards(containerId, articles, maxCards) {
