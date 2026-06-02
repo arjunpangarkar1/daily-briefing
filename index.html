@@ -52,6 +52,7 @@
   .spinner { width: 14px; height: 14px; border: 1.5px solid var(--border); border-top-color: var(--text-muted); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .error-msg { font-size: 12px; color: var(--red); padding: 0.75rem 1rem; background: rgba(194,122,122,0.08); border: 0.5px solid rgba(194,122,122,0.2); border-radius: 8px; }
+  .empty-msg { font-size: 12px; color: var(--text-muted); padding: 0.75rem 1rem; }
   .api-badge { display: inline-block; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); background: var(--surface); border: 0.5px solid var(--border); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
   footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 0.5px solid var(--border); font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
   .refresh-btn { background: none; border: 0.5px solid var(--border); color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 11px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
@@ -78,7 +79,6 @@
   <div class="ticker-pill" id="tick-USO"><span class="sym">Oil (WTI)</span><span class="val">—</span></div>
 </div>
 
-<!-- Finance: 3 cards, Marketaux, 1 request -->
 <div class="section" id="section-finance">
   <div class="section-header">
     <div class="section-dot dot-finance"></div>
@@ -88,7 +88,6 @@
   <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
 </div>
 
-<!-- Geopolitical: 3 cards, GNews, 1 request -->
 <div class="section" id="section-geo">
   <div class="section-header">
     <div class="section-dot dot-geo"></div>
@@ -98,7 +97,6 @@
   <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
 </div>
 
-<!-- Economy: 2 cards, GNews, 1 request -->
 <div class="section" id="section-economy">
   <div class="section-header">
     <div class="section-dot dot-economy"></div>
@@ -108,7 +106,6 @@
   <div class="loading-row"><div class="spinner"></div> Loading headlines...</div>
 </div>
 
-<!-- Central Banks: 2 cards, Marketaux, 1 request -->
 <div class="section" id="section-bank">
   <div class="section-header">
     <div class="section-dot dot-bank"></div>
@@ -119,16 +116,15 @@
 </div>
 
 <footer>
-  <span>Marketaux &middot; Guardian &middot; Alpha Vantage</span>
+  <span>Marketaux &middot; Guardian &middot; Finnhub</span>
   <button class="refresh-btn" onclick="location.reload()">↻ Refresh</button>
 </footer>
 
 <script>
   const MARKETAUX_KEY = 'xmlmuQhOYEKb2F6W2xNwlGqLtMy92GcpIAq9eijS';
-  const GNEWS_KEY     = '39dd3e9d216b44e9aa0f18593d73574c';
+  const GUARDIAN_KEY  = '13bfb0e3-7fbd-4253-b7e4-17112f4c13e3';
   const FINNHUB_KEY   = 'd8fh2i1r01qn4439udg0d8fh2i1r01qn4439udgg';
 
-  // Low-quality regional domains to exclude from Marketaux results
   const BLOCKED_DOMAINS = [
     'indian-share-tips.com','livemint.com','thehindubusinessline.com',
     'manilatimes.net','argaam.com','prweb.com','raskmedia.com.au',
@@ -136,7 +132,6 @@
     'economictimes.indiatimes.com','business-standard.com'
   ];
 
-  // ── Dates ──────────────────────────────────────────────
   const now = new Date();
   document.getElementById('today-date').textContent =
     now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -149,8 +144,6 @@
     if (diff < 1440) return Math.floor(diff / 60) + 'h ago';
     return Math.floor(diff / 1440) + 'd ago';
   }
-
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   function isBlocked(article) {
     const src   = (article.source || '').toLowerCase();
@@ -165,25 +158,20 @@
       'first edition',
       'evening mail',
     ];
-    const BLOCKED_URL_PATTERNS = [
-      '/corrections/',
-      'tv-schedule',
-      'morning-mail',
-    ];
+    const BLOCKED_URL_PATTERNS = ['/corrections/', 'tv-schedule', 'morning-mail'];
     if (BLOCKED_TITLES.some(t => title.includes(t))) return true;
     if (BLOCKED_URL_PATTERNS.some(p => url.includes(p))) return true;
     return BLOCKED_DOMAINS.some(d => src.includes(d) || url.includes(d));
   }
+
   // ── Finnhub Ticker ─────────────────────────────────────
   async function loadTicker() {
     const symbols = [
-      { id: 'tick-SPY', sym: 'SPY',  label: 'S&P 500'  },
-      { id: 'tick-QQQ', sym: 'QQQ',  label: 'NASDAQ'   },
-      { id: 'tick-GLD', sym: 'GLD',  label: 'Gold'     },
-      { id: 'tick-USO', sym: 'USO',  label: 'Oil (WTI)'},
+      { id: 'tick-SPY', sym: 'SPY', label: 'S&P 500'  },
+      { id: 'tick-QQQ', sym: 'QQQ', label: 'NASDAQ'   },
+      { id: 'tick-GLD', sym: 'GLD', label: 'Gold'     },
+      { id: 'tick-USO', sym: 'USO', label: 'Oil (WTI)'},
     ];
-
-    // Finnhub allows 60 req/min — all calls fire simultaneously, no stagger needed
     await Promise.all(symbols.map(async s => {
       try {
         const proxyUrl = `https://corsproxy.io/?https://finnhub.io/api/v1/quote?symbol=${s.sym}&token=${FINNHUB_KEY}`;
@@ -199,6 +187,7 @@
           <span class="chg ${isUp ? 'up' : 'dn'}">${isUp ? '▲' : '▼'} ${Math.abs(pct)}%</span>`;
       } catch(e) {}
     }));
+  }
 
   // ── Card Renderer ──────────────────────────────────────
   function renderCards(containerId, articles, maxCards) {
@@ -208,16 +197,18 @@
     section.appendChild(header);
 
     if (!articles || !articles.length) {
-      const empty = document.createElement('div');
-      empty.style.cssText = 'font-size:12px;color:var(--text-muted);padding:0.75rem 1rem;';
-      empty.textContent = containerId === 'section-bank'
-        ? 'No new central bank updates today.'
-        : 'No articles found right now — try refreshing later.';
-      section.appendChild(empty);
+      const msg = document.createElement('div');
+      if (containerId === 'section-bank') {
+        msg.className = 'empty-msg';
+        msg.textContent = 'No new central bank updates today.';
+      } else {
+        msg.className = 'empty-msg';
+        msg.textContent = 'No articles found right now — try refreshing later.';
+      }
+      section.appendChild(msg);
       return;
     }
 
-    // Cap any single source at 1 card to maximise variety within small card counts
     const sourceCounts = {};
     const deduped = [];
     const geoSection = containerId === 'section-geo';
@@ -246,7 +237,7 @@
         <div class="card-headline">${a.title || 'No headline'}</div>
         <div class="card-summary">${summary}</div>
         <div class="card-footer">
-          <span class="card-time">${a.publishedAt || a.published_at ? timeAgo(a.publishedAt || a.published_at) : ''}</span>
+          <span class="card-time">${a.publishedAt ? timeAgo(a.publishedAt) : ''}</span>
           <span class="card-link">Read →</span>
         </div>`;
       grid.appendChild(card);
@@ -265,7 +256,7 @@
     section.appendChild(err);
   }
 
-  // ── Marketaux — single request per section ─────────────
+  // ── Marketaux ──────────────────────────────────────────
   async function fetchMarketaux(keywords) {
     const url = `https://api.marketaux.com/v1/news/all`
       + `?keywords=${encodeURIComponent(keywords)}`
@@ -289,37 +280,34 @@
       }));
   }
 
-  // ── Guardian — single request per section ────────────────
-async function fetchGuardian(query, max) {
+  // ── Guardian ───────────────────────────────────────────
+  async function fetchGuardian(query, max) {
     const url = `https://content.guardianapis.com/search`
       + `?q=${encodeURIComponent(query)}`
       + `&show-fields=trailText`
       + `&page-size=${max}`
       + `&order-by=newest`
-      + `&api-key=13bfb0e3-7fbd-4253-b7e4-17112f4c13e3`;
+      + `&api-key=${GUARDIAN_KEY}`;
     const timeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Request timed out — try refreshing.')), 10000)
     );
     const res  = await Promise.race([fetch(url), timeout]);
     const data = await res.json();
     if (data.response?.status !== 'ok') throw new Error('Guardian API error');
-    return (data.response.results || []).map(a => ({
-      url:         a.webUrl,
-      source:      'The Guardian',
-      title:       a.webTitle,
-      description: a.fields?.trailText || '',
-      publishedAt: a.webPublicationDate,
-    }));
+    return (data.response.results || [])
+      .filter(a => !isBlocked({ title: a.webTitle, url: a.webUrl, source: 'The Guardian' }))
+      .map(a => ({
+        url:         a.webUrl,
+        source:      'The Guardian',
+        title:       a.webTitle,
+        description: a.fields?.trailText || '',
+        publishedAt: a.webPublicationDate,
+      }));
   }
 
   // ── Load All News ──────────────────────────────────────
-  // Total API calls per page load:
-  //   Marketaux: 2 (Finance + Central Banks)
-  //   GNews:     2 (Geopolitical + Economy)
-  //   AV:        5 (ticker — staggered, background)
   async function loadNews() {
     const shownUrls = new Set();
-
     const sections = [
       {
         id:       'section-finance',
@@ -334,7 +322,7 @@ async function fetchGuardian(query, max) {
       {
         id:       'section-economy',
         maxCards: 2,
-       fetch:    () => fetchGuardian('inflation OR "interest rates" OR GDP OR "trade war" OR tariffs OR unemployment OR "cost of living"', 4),
+        fetch:    () => fetchGuardian('inflation OR "interest rates" OR GDP OR "trade war" OR tariffs OR unemployment OR "cost of living"', 4),
       },
       {
         id:       'section-bank',
@@ -353,7 +341,7 @@ async function fetchGuardian(query, max) {
         });
         renderCards(s.id, articles, s.maxCards);
       } catch(e) {
-        showError(s.id, 'Could not load: ' + e.message);
+        showError(s.id, e.message || 'Could not load — try refreshing.');
       }
     }
   }
