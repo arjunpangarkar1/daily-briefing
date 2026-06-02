@@ -185,7 +185,7 @@
     ];
     for (const s of symbols) {
       try {
-        const res  = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${s.sym}&apikey=${AV_KEY}`);
+        const res  = await (`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${s.sym}&apikey=${AV_KEY}`);
         const data = await res.json();
         const q    = data['Global Quote'];
         if (!q || !q['05. price']) throw new Error('no data');
@@ -299,7 +299,7 @@
       }));
   }
 
-  // ── GNews — single request per section ────────────────
+  // ── Guardian — single request per section ────────────────
 async function fetchGuardian(query, max) {
     const url = `https://content.guardianapis.com/search`
       + `?q=${encodeURIComponent(query)}`
@@ -307,7 +307,10 @@ async function fetchGuardian(query, max) {
       + `&page-size=${max}`
       + `&order-by=newest`
       + `&api-key=13bfb0e3-7fbd-4253-b7e4-17112f4c13e3`;
-    const res  = await fetch(url);
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out — try refreshing.')), 10000)
+    );
+    const res  = await Promise.race([fetch(url), timeout]);
     const data = await res.json();
     if (data.response?.status !== 'ok') throw new Error('Guardian API error');
     return (data.response.results || []).map(a => ({
